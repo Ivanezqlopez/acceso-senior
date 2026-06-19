@@ -1,0 +1,15 @@
+{
+  "name": "Acceso Senior con IA",
+  "short_name": "Acceso Senior",
+  "description": "Asistente con IA para acompañar a personas mayores en trámites y consultas digitales.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f6fb",
+  "theme_color": "#1f6feb",
+  "lang": "es-AR",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

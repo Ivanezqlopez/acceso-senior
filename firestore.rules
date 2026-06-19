@@ -1,0 +1,21 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // La app inicia sesión de forma anónima al abrirse.
+    // Solo permitimos lectura/escritura a usuarios autenticados (anónimos incluidos).
+    // Esto evita el acceso público directo a la API, protegiendo los datos.
+
+    match /users/{dni} {
+      allow read, write: if request.auth != null;
+    }
+
+    match /cases/{caseId} {
+      allow read, write: if request.auth != null;
+    }
+
+    match /counters/{name} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
