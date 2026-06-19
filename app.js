@@ -184,6 +184,17 @@ function escapeHtml(s) {
   return (s || '').replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
 }
 
+// Signature visual: recorrido del caso en 3 pasos (Recibido → En proceso → Resuelto)
+function statusTrack(estado) {
+  const steps = ['Recibido', 'En proceso', 'Resuelto'];
+  const idx = estado === 'resuelto' ? 2 : (estado === 'en proceso' ? 1 : 0);
+  const inner = steps.map((label, i) => {
+    const cls = 'track-step' + (i <= idx ? ' reached' : '') + (i === idx ? ' current' : '');
+    return `<div class="${cls}"><span class="track-dot"></span><span class="track-label">${label}</span></div>`;
+  }).join('');
+  return `<div class="track${idx === 2 ? ' complete' : ''}">${inner}</div>`;
+}
+
 function toDate(f) {
   if (!f) return new Date();
   if (typeof f.toDate === 'function') return f.toDate();
@@ -391,11 +402,11 @@ async function createTicket() {
     hideTyping();
     const nombre = (S.userData.nombre || '').split(' ')[0];
     addTicket(
-      `<b>✅ ¡Listo, ${escapeHtml(nombre)}!</b><br>` +
+      `<span class="ticket-ok">✅ ¡Listo, ${escapeHtml(nombre)}!</span><br>` +
       `Su consulta fue registrada con éxito.<br><br>` +
-      `<b>Caso N° ${caseId}</b><br>` +
-      `Estado: <span class="st-pendiente">Pendiente</span><br><br>` +
-      `En breve un facilitador se pondrá en contacto con usted. ¡Que tenga un excelente día! 🌟`
+      `<span class="ticket-num">Caso N° ${caseId}</span>` +
+      statusTrack('pendiente') +
+      `<div style="margin-top:8px">En breve un facilitador se pondrá en contacto con usted. ¡Que tenga un excelente día! 🌟</div>`
     );
     S.step = 'done';
     setTimeout(() => {
@@ -593,7 +604,8 @@ function statCard(n, label) { return `<div class="stat"><b>${n}</b><span>${label
 
 function caseCard(c) {
   const div = document.createElement('div');
-  div.className = 'case-card';
+  const estado = c.estado || 'pendiente';
+  div.className = 'case-card s-' + estado.replace(/\s+/g, '-');
   const fecha = toDate(c.fecha).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   div.innerHTML =
     `<div class="case-head">
@@ -602,7 +614,8 @@ function caseCard(c) {
      </div>
      <div class="case-meta">${escapeHtml(c.nombre || '')} · DNI ${escapeHtml(c.dni || '')}${c.telefono ? ' · Tel ' + escapeHtml(c.telefono) : ''}</div>
      <div class="case-desc">${escapeHtml(c.descripcion || '')}</div>
-     <div class="case-meta">📅 ${fecha}</div>`;
+     <div class="case-meta">📅 ${fecha}</div>
+     ${statusTrack(estado)}`;
 
   // Selector de estado
   const sel = document.createElement('select');

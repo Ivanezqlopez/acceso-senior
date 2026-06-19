@@ -1,6 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#1f6feb"/>
-  <text x="50%" y="50%" dy="0.06em" text-anchor="middle" dominant-baseline="middle"
-        font-family="Segoe UI, Roboto, sans-serif" font-size="220" font-weight="800" fill="#ffffff">AS</text>
-  <circle cx="256" cy="392" r="26" fill="#bfe0ff"/>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0E6A65"/>
+      <stop offset="1" stop-color="#084744"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="120" fill="url(#bg)"/>
+  <path d="M150 150h212a40 40 0 0 1 40 40v118a40 40 0 0 1-40 40H252l-70 64v-64h-32a40 40 0 0 1-40-40V190a40 40 0 0 1 40-40z" fill="#FBFAF7"/>
+  <circle cx="222" cy="248" r="26" fill="#0B5B57"/>
+  <circle cx="312" cy="248" r="26" fill="#E29A3C"/>
 </svg>
