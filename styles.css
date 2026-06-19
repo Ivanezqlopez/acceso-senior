@@ -4,26 +4,28 @@
    Teal profundo + ámbar miel · Plus Jakarta Sans (jerarquía por peso)
    ============================================================ */
 :root {
-  /* Paleta */
-  --bg: #EFF3F1;
-  --surface: #FBFAF7;
-  --surface-2: #F3F6F4;
-  --primary: #0B5B57;
-  --primary-dark: #084744;
-  --primary-soft: #E2EDEB;
-  --accent: #E29A3C;
-  --accent-soft: #FBEFDC;
-  --user: #0B5B57;
-  --user-text: #FBFAF7;
-  --text: #172E2B;
-  --muted: #5E726F;
-  --border: #DDE5E2;
-  --ok: #1F8A5B;
-  --ok-soft: #E1F1E8;
-  --warn: #C9802A;
-  --warn-soft: #F7EBD8;
-  --danger: #C44536;
-  --danger-soft: #F7E4E1;
+  /* Paleta de marca "id" — violeta + cian */
+  --bg: #F4F4FB;
+  --surface: #FFFFFF;
+  --surface-2: #F1F0F9;
+  --primary: #6F62E6;
+  --primary-bright: #8478EC;
+  --primary-dark: #574AC9;
+  --primary-soft: #E9E7FB;
+  --accent: #16C5DF;
+  --accent-soft: #D7F4FA;
+  --accent-ink: #0C7F90;
+  --user: #6F62E6;
+  --user-text: #FFFFFF;
+  --text: #211F38;
+  --muted: #6A6986;
+  --border: #E6E5F1;
+  --ok: #1F9D6B;
+  --ok-soft: #E0F3EA;
+  --warn: #E0992B;
+  --warn-soft: #FBEFDB;
+  --danger: #E0544B;
+  --danger-soft: #FBE5E3;
 
   /* Tipografía */
   --font-body: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
@@ -33,9 +35,9 @@
   --radius-lg: 22px;
   --radius: 16px;
   --radius-sm: 12px;
-  --shadow-sm: 0 1px 2px rgba(11, 40, 38, 0.06);
-  --shadow: 0 6px 20px -8px rgba(11, 40, 38, 0.16);
-  --shadow-lg: 0 16px 40px -12px rgba(11, 40, 38, 0.24);
+  --shadow-sm: 0 1px 2px rgba(40, 30, 90, 0.06);
+  --shadow: 0 6px 20px -8px rgba(40, 30, 90, 0.18);
+  --shadow-lg: 0 16px 40px -12px rgba(40, 30, 90, 0.26);
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -55,7 +57,7 @@ html, body {
 #app {
   height: 100%; max-width: 520px; margin: 0 auto; position: relative;
   background: var(--bg);
-  box-shadow: 0 0 60px -20px rgba(11, 40, 38, 0.18);
+  box-shadow: 0 0 60px -20px rgba(40, 30, 90, 0.18);
 }
 
 .view { display: none; flex-direction: column; height: 100%; }
@@ -68,7 +70,7 @@ html, body {
   display: flex; align-items: center; justify-content: space-between;
   gap: 12px; padding: 15px 18px;
   padding-top: calc(15px + env(safe-area-inset-top));
-  background: linear-gradient(135deg, #0E6A65 0%, var(--primary) 60%, var(--primary-dark) 100%);
+  background: linear-gradient(135deg, var(--primary-bright) 0%, var(--primary) 55%, var(--primary-dark) 100%);
   color: #fff; position: relative; z-index: 5;
   box-shadow: var(--shadow);
 }
@@ -101,8 +103,8 @@ html, body {
   display: flex; flex-direction: column; gap: 12px;
   -webkit-overflow-scrolling: touch;
   background:
-    radial-gradient(circle at 100% 0, rgba(226, 154, 60, 0.06), transparent 40%),
-    radial-gradient(circle at 0 100%, rgba(11, 91, 87, 0.05), transparent 45%);
+    radial-gradient(circle at 100% 0, rgba(22, 197, 223, 0.07), transparent 40%),
+    radial-gradient(circle at 0 100%, rgba(111, 98, 230, 0.06), transparent 45%);
 }
 .msg {
   max-width: 82%; padding: 13px 17px; border-radius: var(--radius-lg);
@@ -274,7 +276,7 @@ html, body {
 .case-meta { font-size: 0.84rem; color: var(--muted); margin: 5px 0; }
 .case-desc { margin: 10px 0; line-height: 1.5; }
 .case-cat {
-  display: inline-block; background: var(--accent-soft); color: #9a6414;
+  display: inline-block; background: var(--accent-soft); color: var(--accent-ink);
   font-size: 0.76rem; padding: 4px 11px; border-radius: 999px; font-weight: 700; white-space: nowrap;
 }
 .status-select, .role-select-sm {
@@ -334,7 +336,7 @@ html, body {
 
 /* Overlay */
 #overlay {
-  position: fixed; inset: 0; background: rgba(11, 40, 38, 0.55); backdrop-filter: blur(3px);
+  position: fixed; inset: 0; background: rgba(33, 31, 56, 0.55); backdrop-filter: blur(3px);
   display: grid; place-items: center; padding: 24px; z-index: 100;
 }
 .overlay-box {
