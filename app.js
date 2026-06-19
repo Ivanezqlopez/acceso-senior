@@ -459,6 +459,9 @@ let session = null;
 function showView(id) {
   document.querySelectorAll('.view').forEach((v) => v.classList.remove('active'));
   $('#' + id).classList.add('active');
+  // Guardamos la sección en la dirección para que al recargar vuelva acá.
+  const hash = (id === 'view-panel') ? '#panel' : '#chat';
+  if (location.hash !== hash) { try { history.replaceState(null, '', hash); } catch (e) { location.hash = hash; } }
 }
 $('#btn-panel').addEventListener('click', () => showView('view-panel'));
 $('#btn-back').addEventListener('click', () => showView('view-chat'));
@@ -478,11 +481,13 @@ $('#login-form').addEventListener('submit', async (e) => {
     return;
   }
   session = user;
+  try { sessionStorage.setItem('panel_session', JSON.stringify(user)); } catch (e) {}
   await renderPanel();
 });
 
 $('#btn-logout').addEventListener('click', () => {
   session = null;
+  try { sessionStorage.removeItem('panel_session'); } catch (e) {}
   $('#login-box').hidden = false;
   $('#cases-box').hidden = true;
   $('#login-form').reset();
@@ -581,6 +586,18 @@ function overlayError(e) {
    Arranque
    ============================================================ */
 startConversation();
+
+// Restaurar la sección donde estaba el usuario antes de recargar.
+(async function restoreView() {
+  if (location.hash === '#panel') {
+    showView('view-panel');
+    let saved = null;
+    try { saved = sessionStorage.getItem('panel_session'); } catch (e) {}
+    if (saved) {
+      try { session = JSON.parse(saved); await renderPanel(); } catch (e) {}
+    }
+  }
+})();
 
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
