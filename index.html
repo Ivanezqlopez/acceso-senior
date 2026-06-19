@@ -14,7 +14,7 @@
   <div id="app">
 
     <!-- ===== VISTA CHAT (Consultante / FaciliBot) ===== -->
-    <section id="view-chat" class="view active">
+    <section id="view-chat" class="view active">g
       <header class="topbar">
         <div class="brand">
           <span class="logo">A</span>
@@ -73,15 +73,63 @@
         </details>
       </div>
 
-      <!-- Casos -->
+      <!-- Panel principal -->
       <div id="cases-box" class="panel-content" hidden>
         <div class="panel-tools">
           <span id="role-badge" class="badge"></span>
           <button id="btn-logout" class="text-btn">Salir</button>
         </div>
-        <div class="stats" id="stats"></div>
-        <h2>Casos</h2>
-        <div id="cases-list" class="cases-list"></div>
+
+        <!-- Pestañas -->
+        <div class="tabs">
+          <button class="tab active" data-tab="tab-casos">Casos</button>
+          <button class="tab" data-tab="tab-usuarios" id="tab-usuarios-btn" hidden>Usuarios</button>
+        </div>
+
+        <!-- Pestaña Casos -->
+        <div id="tab-casos" class="tab-panel active">
+          <div class="stats" id="stats"></div>
+          <div class="filters" id="case-filters">
+            <button class="chip active" data-filter="todos">Todos</button>
+            <button class="chip" data-filter="mios">Mis casos</button>
+            <button class="chip" data-filter="libres">Sin asignar</button>
+          </div>
+          <div id="cases-list" class="cases-list"></div>
+        </div>
+
+        <!-- Pestaña Usuarios (solo admin) -->
+        <div id="tab-usuarios" class="tab-panel" hidden>
+          <h2>Crear usuario</h2>
+          <form id="create-user-form" class="login-form" autocomplete="off">
+            <label>Nombre completo
+              <input id="nu-nombre" type="text" placeholder="Nombre y apellido" required />
+            </label>
+            <label>Correo
+              <input id="nu-email" type="email" placeholder="correo@ejemplo.com" required />
+            </label>
+            <label>DNI
+              <input id="nu-dni" type="text" inputmode="numeric" placeholder="Solo números" required />
+            </label>
+            <label>Teléfono
+              <input id="nu-telefono" type="text" inputmode="numeric" placeholder="Opcional" />
+            </label>
+            <label>Rol
+              <select id="nu-rol">
+                <option value="facilitador">Facilitador</option>
+                <option value="consultante">Consultante</option>
+                <option value="admin">Administrador</option>
+              </select>
+            </label>
+            <label>Contraseña
+              <input id="nu-pass" type="text" placeholder="Contraseña inicial" value="1234" required />
+            </label>
+            <button type="submit" class="primary-btn">Crear usuario</button>
+            <p id="nu-msg" class="error" hidden></p>
+          </form>
+
+          <h2 style="margin-top:24px">Usuarios</h2>
+          <div id="users-list" class="cases-list"></div>
+        </div>
       </div>
     </section>
 

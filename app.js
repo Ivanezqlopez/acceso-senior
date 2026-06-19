@@ -96,7 +96,7 @@ async function createCase(data) {
   await ensureReady();
   const numero = await nextCaseNumber();
   await addDoc(collection(db, 'cases'), {
-    ...data, numero, estado: 'pendiente', fecha: serverTimestamp()
+    ...data, numero, estado: 'pendiente', asignadoDni: null, asignadoNombre: null, fecha: serverTimestamp()
   });
   return numero;
 }
@@ -126,10 +126,41 @@ async function setCaseStatus(id, estado) {
   await updateDoc(doc(db, 'cases', id), { estado });
 }
 
+// Asignar (o liberar) un caso a un facilitador
+async function assignCase(id, dni, nombre) {
+  await ensureReady();
+  await updateDoc(doc(db, 'cases', id), {
+    asignadoDni: dni || null,
+    asignadoNombre: nombre || null
+  });
+}
+
 async function loginUser(email, pass) {
   await ensureReady();
   const snap = await getDocs(query(collection(db, 'users'), where('email', '==', email)));
   return snap.docs.map((d) => d.data()).find((u) => u.pass === pass) || null;
+}
+
+async function getAllUsers() {
+  await ensureReady();
+  const snap = await getDocs(collection(db, 'users'));
+  return snap.docs.map((d) => d.data()).sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
+}
+
+// Crear usuario (uso del admin). Devuelve {ok} o {error}
+async function createUser(u) {
+  await ensureReady();
+  const existing = await getDoc(doc(db, 'users', u.dni));
+  if (existing.exists()) return { error: 'Ya existe un usuario con ese DNI.' };
+  const dup = await getDocs(query(collection(db, 'users'), where('email', '==', u.email)));
+  if (!dup.empty) return { error: 'Ya existe un usuario con ese correo.' };
+  await setDoc(doc(db, 'users', u.dni), u);
+  return { ok: true };
+}
+
+async function updateUserRole(dni, rol) {
+  await ensureReady();
+  await updateDoc(doc(db, 'users', dni), { rol });
 }
 
 /* ============================================================
@@ -463,8 +494,28 @@ function showView(id) {
   const hash = (id === 'view-panel') ? '#panel' : '#chat';
   if (location.hash !== hash) { try { history.replaceState(null, '', hash); } catch (e) { location.hash = hash; } }
 }
+let allCases = [];
+let caseFilter = 'todos';
+
 $('#btn-panel').addEventListener('click', () => showView('view-panel'));
 $('#btn-back').addEventListener('click', () => showView('view-chat'));
+
+/* ---------- Pestañas y filtros ---------- */
+function activateTab(tabId) {
+  document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === tabId));
+  document.querySelectorAll('.tab-panel').forEach((p) => {
+    const on = p.id === tabId;
+    p.classList.toggle('active', on);
+    p.hidden = !on;
+  });
+}
+document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => activateTab(t.dataset.tab)));
+
+document.querySelectorAll('#case-filters .chip').forEach((ch) => ch.addEventListener('click', () => {
+  document.querySelectorAll('#case-filters .chip').forEach((x) => x.classList.toggle('active', x === ch));
+  caseFilter = ch.dataset.filter;
+  renderCases();
+}));
 
 $('#login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -496,27 +547,42 @@ $('#btn-logout').addEventListener('click', () => {
 async function renderPanel() {
   $('#login-box').hidden = true;
   $('#cases-box').hidden = false;
-  $('#role-badge').textContent = session.rol === 'admin' ? `Admin · ${session.nombre}` : `Facilitador · ${session.nombre}`;
-  $('#panel-subtitle').textContent = session.rol === 'admin' ? 'Administración general' : 'Casos asignados';
+  const isAdmin = session.rol === 'admin';
+  $('#role-badge').textContent = isAdmin ? `Admin · ${session.nombre}` : `Facilitador · ${session.nombre}`;
+  $('#panel-subtitle').textContent = isAdmin ? 'Administración general' : 'Gestión de casos';
+  $('#tab-usuarios-btn').hidden = !isAdmin;
+  if (!isAdmin) activateTab('tab-casos');
 
+  await loadCases();
+  if (isAdmin) await loadUsers();
+}
+
+async function loadCases() {
   const list = $('#cases-list');
   list.innerHTML = '<p class="empty">Cargando casos…</p>';
-  let cases = [];
-  try { cases = await getAllCases(); }
+  try { allCases = await getAllCases(); }
   catch (e) { list.innerHTML = '<p class="empty">No se pudieron cargar los casos.</p>'; return; }
+  renderStats();
+  renderCases();
+}
 
-  const stats = {
-    total: cases.length,
-    pend: cases.filter((c) => c.estado === 'pendiente').length,
-    proc: cases.filter((c) => c.estado === 'en proceso').length,
-    res: cases.filter((c) => c.estado === 'resuelto').length
-  };
+function renderStats() {
+  const c = allCases;
   $('#stats').innerHTML =
-    statCard(stats.total, 'Total') + statCard(stats.pend, 'Pendientes') +
-    statCard(stats.proc, 'En proceso') + statCard(stats.res, 'Resueltos');
+    statCard(c.length, 'Total') +
+    statCard(c.filter((x) => x.estado === 'pendiente').length, 'Pendientes') +
+    statCard(c.filter((x) => x.estado === 'en proceso').length, 'En proceso') +
+    statCard(c.filter((x) => x.estado === 'resuelto').length, 'Resueltos');
+}
+
+function renderCases() {
+  const list = $('#cases-list');
+  let cases = allCases;
+  if (caseFilter === 'mios') cases = cases.filter((c) => c.asignadoDni && c.asignadoDni === session.dni);
+  else if (caseFilter === 'libres') cases = cases.filter((c) => !c.asignadoDni);
 
   if (!cases.length) {
-    list.innerHTML = '<p class="empty">Todavía no hay casos cargados.<br>Los casos creados desde el asistente aparecerán aquí.</p>';
+    list.innerHTML = '<p class="empty">No hay casos para mostrar en esta vista.</p>';
     return;
   }
   list.innerHTML = '';
@@ -538,6 +604,7 @@ function caseCard(c) {
      <div class="case-desc">${escapeHtml(c.descripcion || '')}</div>
      <div class="case-meta">📅 ${fecha}</div>`;
 
+  // Selector de estado
   const sel = document.createElement('select');
   sel.className = 'status-select';
   ['pendiente', 'en proceso', 'resuelto'].forEach((est) => {
@@ -549,12 +616,111 @@ function caseCard(c) {
   });
   sel.addEventListener('change', async () => {
     sel.disabled = true;
-    try { await setCaseStatus(c.id, sel.value); await renderPanel(); }
+    try { await setCaseStatus(c.id, sel.value); await loadCases(); }
     catch (e) { sel.disabled = false; alert('No se pudo actualizar el estado.'); }
+  });
+  div.appendChild(sel);
+
+  // Fila de asignación
+  const assign = document.createElement('div');
+  assign.className = 'case-assign';
+  const mine = c.asignadoDni && c.asignadoDni === session.dni;
+  if (c.asignadoDni) {
+    assign.innerHTML = `<span class="assigned-to">👤 Asignado a: <b>${escapeHtml(c.asignadoNombre || 'Facilitador')}</b></span>` +
+      (mine ? '<span class="mine-tag">Mi caso</span>' : '');
+    if (mine || session.rol === 'admin') {
+      const free = document.createElement('button');
+      free.className = 'text-btn';
+      free.textContent = 'Liberar';
+      free.addEventListener('click', async () => {
+        free.disabled = true;
+        try { await assignCase(c.id, null, null); await loadCases(); }
+        catch (e) { free.disabled = false; alert('No se pudo liberar el caso.'); }
+      });
+      assign.appendChild(free);
+    }
+  } else {
+    assign.innerHTML = '<span class="unassigned">⚠ Sin asignar</span>';
+    const take = document.createElement('button');
+    take.className = 'take-btn';
+    take.textContent = 'Tomar caso';
+    take.addEventListener('click', async () => {
+      take.disabled = true;
+      try { await assignCase(c.id, session.dni, session.nombre); await loadCases(); }
+      catch (e) { take.disabled = false; alert('No se pudo tomar el caso.'); }
+    });
+    assign.appendChild(take);
+  }
+  div.appendChild(assign);
+  return div;
+}
+
+/* ---------- Gestión de usuarios (admin) ---------- */
+async function loadUsers() {
+  const list = $('#users-list');
+  list.innerHTML = '<p class="empty">Cargando…</p>';
+  let users;
+  try { users = await getAllUsers(); }
+  catch (e) { list.innerHTML = '<p class="empty">No se pudieron cargar los usuarios.</p>'; return; }
+  if (!users.length) { list.innerHTML = '<p class="empty">No hay usuarios.</p>'; return; }
+  list.innerHTML = '';
+  users.forEach((u) => list.appendChild(userCard(u)));
+}
+
+function userCard(u) {
+  const div = document.createElement('div');
+  div.className = 'user-card';
+  const rol = u.rol || 'consultante';
+  div.innerHTML =
+    `<div class="case-head">
+       <span class="case-id">${escapeHtml(u.nombre || '(sin nombre)')}</span>
+       <span class="role-pill role-${rol}">${escapeHtml(rol)}</span>
+     </div>
+     <div class="case-meta">${escapeHtml(u.email || '')} · DNI ${escapeHtml(u.dni || '')}${u.telefono ? ' · Tel ' + escapeHtml(u.telefono) : ''}</div>`;
+
+  const sel = document.createElement('select');
+  sel.className = 'role-select-sm';
+  [['consultante', 'Consultante'], ['facilitador', 'Facilitador'], ['admin', 'Administrador']].forEach(([v, l]) => {
+    const o = document.createElement('option');
+    o.value = v; o.textContent = 'Rol: ' + l;
+    if (v === rol) o.selected = true;
+    sel.appendChild(o);
+  });
+  sel.addEventListener('change', async () => {
+    sel.disabled = true;
+    try { await updateUserRole(u.dni, sel.value); await loadUsers(); }
+    catch (e) { sel.disabled = false; alert('No se pudo cambiar el rol.'); }
   });
   div.appendChild(sel);
   return div;
 }
+
+$('#create-user-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const msg = $('#nu-msg');
+  msg.hidden = true;
+  msg.style.color = '';
+  const dni = cleanDni($('#nu-dni').value);
+  if (!isValidDni(dni)) { msg.textContent = 'El DNI debe tener 7 u 8 dígitos.'; msg.hidden = false; return; }
+  const nombre = $('#nu-nombre').value.trim();
+  const email = $('#nu-email').value.trim().toLowerCase();
+  const telefono = $('#nu-telefono').value.replace(/[.\-\s()]/g, '');
+  const rol = $('#nu-rol').value;
+  const pass = $('#nu-pass').value || '1234';
+  if (!nombre || !email) { msg.textContent = 'Completá nombre y correo.'; msg.hidden = false; return; }
+
+  let res;
+  try { res = await createUser({ dni, nombre, email, telefono, rol, pass }); }
+  catch (err) { msg.textContent = 'No se pudo crear el usuario.'; msg.hidden = false; return; }
+  if (res.error) { msg.textContent = res.error; msg.hidden = false; return; }
+
+  msg.style.color = 'var(--ok)';
+  msg.textContent = `✅ Usuario creado: ${nombre} (${rol}).`;
+  msg.hidden = false;
+  e.target.reset();
+  $('#nu-pass').value = '1234';
+  await loadUsers();
+});
 
 /* ============================================================
    Overlay de configuración / errores
