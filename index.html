@@ -68,12 +68,16 @@
       <!-- Login -->
       <div id="login-box" class="panel-content">
         <h2>Ingresar</h2>
-        <form id="login-form" class="login-form" autocomplete="off">
+        <form id="login-form" class="login-form" autocomplete="on">
           <label>Correo
-            <input id="login-email" type="email" placeholder="correo@ejemplo.com" required />
+            <input id="login-email" name="email" type="email" autocomplete="username" placeholder="correo@ejemplo.com" required />
           </label>
           <label>Contraseña
-            <input id="login-pass" type="password" placeholder="••••" required />
+            <input id="login-pass" name="password" type="password" autocomplete="current-password" placeholder="••••" required />
+          </label>
+          <label class="remember">
+            <input id="login-remember" type="checkbox" />
+            Recordar mis datos
           </label>
           <button type="submit" class="primary-btn">Entrar</button>
           <p id="login-error" class="error" hidden>Credenciales incorrectas.</p>

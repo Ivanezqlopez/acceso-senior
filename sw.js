@@ -1,4 +1,4 @@
-const CACHE = 'acceso-senior-v13';
+const CACHE = 'acceso-senior-v14';
 const ASSETS = [
   './',
   './index.html',

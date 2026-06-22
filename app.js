@@ -626,8 +626,26 @@ $('#login-form').addEventListener('submit', async (e) => {
   }
   session = user;
   try { sessionStorage.setItem('panel_session', JSON.stringify(user)); } catch (e) {}
+  // Recordar credenciales si el usuario lo pidió
+  try {
+    if ($('#login-remember').checked) localStorage.setItem('panel_remember', JSON.stringify({ email, pass }));
+    else localStorage.removeItem('panel_remember');
+  } catch (e) {}
   await renderPanel();
 });
+
+// Prerellenar el login con las credenciales recordadas
+function prefillLogin() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('panel_remember') || 'null');
+    if (saved && saved.email) {
+      $('#login-email').value = saved.email;
+      $('#login-pass').value = saved.pass || '';
+      $('#login-remember').checked = true;
+    }
+  } catch (e) {}
+}
+prefillLogin();
 
 $('#btn-logout').addEventListener('click', () => {
   session = null;
@@ -635,6 +653,7 @@ $('#btn-logout').addEventListener('click', () => {
   $('#login-box').hidden = false;
   $('#cases-box').hidden = true;
   $('#login-form').reset();
+  prefillLogin();
 });
 
 async function renderPanel() {
