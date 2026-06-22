@@ -10,7 +10,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import {
   getFirestore, collection, doc, getDoc, setDoc, getDocs,
-  addDoc, updateDoc, query, where, serverTimestamp, runTransaction
+  addDoc, updateDoc, query, where, serverTimestamp, runTransaction, arrayUnion
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
 
@@ -133,6 +133,18 @@ async function assignCase(id, dni, nombre) {
     asignadoDni: dni || null,
     asignadoNombre: nombre || null
   });
+}
+
+// Agregar una nota de seguimiento al caso
+async function addCaseNote(id, nota) {
+  await ensureReady();
+  await updateDoc(doc(db, 'cases', id), { notas: arrayUnion(nota) });
+}
+
+// Adjuntar un enlace (link) al caso
+async function addCaseLink(id, enlace) {
+  await ensureReady();
+  await updateDoc(doc(db, 'cases', id), { enlaces: arrayUnion(enlace) });
 }
 
 async function loginUser(email, pass) {
@@ -665,7 +677,119 @@ function caseCard(c) {
     assign.appendChild(take);
   }
   div.appendChild(assign);
+
+  // Seguimiento (notas + enlaces): visible si el caso está asignado o ya tiene contenido
+  const hasContent = (Array.isArray(c.notas) && c.notas.length) || (Array.isArray(c.enlaces) && c.enlaces.length);
+  if (c.asignadoDni || hasContent) {
+    const canEdit = !!(c.asignadoDni && (mine || session.rol === 'admin'));
+    div.appendChild(buildFollowUp(c, canEdit));
+  }
   return div;
+}
+
+/* ---------- Seguimiento del caso: notas y enlaces ---------- */
+function fmtWhen(iso) {
+  try { return toDate(iso).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); }
+  catch (e) { return ''; }
+}
+function isHttpUrl(s) {
+  try { const u = new URL(s); return u.protocol === 'http:' || u.protocol === 'https:'; }
+  catch (e) { return false; }
+}
+
+function buildFollowUp(c, canEdit) {
+  const wrap = document.createElement('div');
+  wrap.className = 'followup';
+
+  // --- Notas ---
+  const notas = (Array.isArray(c.notas) ? c.notas.slice() : []).sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
+  const notasSec = document.createElement('div');
+  notasSec.className = 'fu-section';
+  notasSec.innerHTML =
+    `<h4 class="fu-title">📝 Notas (${notas.length})</h4>` +
+    (notas.length
+      ? '<div class="fu-list">' + notas.map((n) =>
+          `<div class="fu-note"><div class="fu-note-text">${escapeHtml(n.texto || '')}</div>` +
+          `<div class="fu-meta">${escapeHtml(n.autor || '')} · ${fmtWhen(n.fecha)}</div></div>`
+        ).join('') + '</div>'
+      : '<p class="fu-empty">Sin notas todavía.</p>');
+  if (canEdit) {
+    const ta = document.createElement('textarea');
+    ta.className = 'fu-textarea'; ta.rows = 2; ta.placeholder = 'Escriba una nota de seguimiento…';
+    const btn = document.createElement('button');
+    btn.className = 'fu-btn'; btn.textContent = 'Agregar nota';
+    btn.addEventListener('click', async () => {
+      const texto = ta.value.trim();
+      if (texto.length < 2) { ta.focus(); return; }
+      btn.disabled = true;
+      try {
+        await addCaseNote(c.id, { texto, autor: session.nombre, autorDni: session.dni, fecha: new Date().toISOString() });
+        await loadCases();
+      } catch (e) { btn.disabled = false; alert('No se pudo agregar la nota.'); }
+    });
+    notasSec.appendChild(ta);
+    notasSec.appendChild(btn);
+  }
+  wrap.appendChild(notasSec);
+
+  // --- Enlaces ---
+  const enlaces = (Array.isArray(c.enlaces) ? c.enlaces.slice() : []).sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
+  const linksSec = document.createElement('div');
+  linksSec.className = 'fu-section';
+  const lt = document.createElement('h4');
+  lt.className = 'fu-title';
+  lt.textContent = `🔗 Enlaces (${enlaces.length})`;
+  linksSec.appendChild(lt);
+  if (enlaces.length) {
+    const listEl = document.createElement('div');
+    listEl.className = 'fu-list';
+    enlaces.forEach((l) => {
+      const row = document.createElement('div');
+      row.className = 'fu-link';
+      if (isHttpUrl(l.url)) {
+        const a = document.createElement('a');
+        a.href = l.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+        a.textContent = l.titulo || l.url;
+        row.appendChild(a);
+      } else {
+        row.textContent = l.titulo || l.url || '';
+      }
+      const meta = document.createElement('div');
+      meta.className = 'fu-meta';
+      meta.textContent = `${l.autor || ''} · ${fmtWhen(l.fecha)}`;
+      row.appendChild(meta);
+      listEl.appendChild(row);
+    });
+    linksSec.appendChild(listEl);
+  } else {
+    const p = document.createElement('p');
+    p.className = 'fu-empty';
+    p.textContent = 'Sin enlaces todavía.';
+    linksSec.appendChild(p);
+  }
+  if (canEdit) {
+    const titulo = document.createElement('input');
+    titulo.className = 'fu-input'; titulo.type = 'text'; titulo.placeholder = 'Título (opcional)';
+    const url = document.createElement('input');
+    url.className = 'fu-input'; url.type = 'url'; url.placeholder = 'https://…';
+    const btn = document.createElement('button');
+    btn.className = 'fu-btn'; btn.textContent = 'Adjuntar enlace';
+    btn.addEventListener('click', async () => {
+      const u = url.value.trim();
+      if (!isHttpUrl(u)) { alert('Ingrese un enlace válido que empiece con http:// o https://'); url.focus(); return; }
+      btn.disabled = true;
+      try {
+        await addCaseLink(c.id, { url: u, titulo: titulo.value.trim(), autor: session.nombre, autorDni: session.dni, fecha: new Date().toISOString() });
+        await loadCases();
+      } catch (e) { btn.disabled = false; alert('No se pudo adjuntar el enlace.'); }
+    });
+    linksSec.appendChild(titulo);
+    linksSec.appendChild(url);
+    linksSec.appendChild(btn);
+  }
+  wrap.appendChild(linksSec);
+
+  return wrap;
 }
 
 /* ---------- Gestión de usuarios (admin) ---------- */
