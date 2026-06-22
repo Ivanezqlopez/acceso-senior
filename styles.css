@@ -152,6 +152,22 @@ html, body {
 .quick button:hover { background: var(--primary-soft); }
 .quick button:active { background: var(--primary); color: #fff; transform: scale(0.97); }
 
+/* Menú desplegable en el chat (ej. establecimiento) */
+.picker { align-self: flex-start; display: flex; flex-wrap: wrap; gap: 8px; max-width: 90%; }
+.picker-select {
+  flex: 1 1 auto; min-width: 0; border: 1.5px solid var(--primary); border-radius: var(--radius-sm);
+  padding: 12px 14px; font-size: 1.02rem; font-family: var(--font-body); color: var(--text);
+  background: var(--surface); outline: none; cursor: pointer;
+}
+.picker-select:focus { box-shadow: 0 0 0 3px var(--primary-soft); }
+.picker-btn {
+  background: var(--primary); color: #fff; border: none; border-radius: var(--radius-sm);
+  padding: 12px 18px; font-size: 0.98rem; font-weight: 700; cursor: pointer;
+  font-family: var(--font-body); transition: background 0.15s, transform 0.1s;
+}
+.picker-btn:hover { background: var(--primary-dark); }
+.picker-btn:active { transform: scale(0.97); }
+
 /* ===== Composer ===== */
 .composer {
   display: flex; align-items: center; gap: 9px; padding: 12px 14px;

@@ -220,7 +220,7 @@ let S = freshSession();
 function freshSession() {
   return {
     step: 'ask_dni',
-    userData: { dni: null, nombre: null, telefono: null, email: null },
+    userData: { dni: null, nombre: null, telefono: null, email: null, espacio: null },
     problemData: { descripcion: null, categoria: null },
     dbUser: null,
     userLookupDone: false
@@ -258,6 +258,28 @@ function addQuickReplies(options) {
   messagesEl.appendChild(wrap);
   scrollDown();
 }
+
+// Menú desplegable (ej. elegir establecimiento)
+function addEspacioPicker() {
+  const wrap = document.createElement('div');
+  wrap.className = 'picker';
+  const sel = document.createElement('select');
+  sel.className = 'picker-select';
+  ESPACIOS.forEach((op) => {
+    const o = document.createElement('option');
+    o.value = op; o.textContent = op;
+    sel.appendChild(o);
+  });
+  const btn = document.createElement('button');
+  btn.className = 'picker-btn';
+  btn.textContent = 'Confirmar';
+  btn.onclick = () => { const v = sel.value; wrap.remove(); handleUser(v); };
+  wrap.appendChild(sel);
+  wrap.appendChild(btn);
+  messagesEl.appendChild(wrap);
+  scrollDown();
+}
+
 function showTyping() {
   if ($('#typing')) return;
   const t = document.createElement('div');
@@ -303,6 +325,8 @@ function handleUser(rawText) {
     case 'ask_problem': return stepAskProblem(text);
     case 'reg_name':    return stepRegName(text);
     case 'reg_phone':   return stepRegPhone(text);
+    case 'reg_espacio': return stepRegEspacio(text);
+    case 'reg_espacio_otro': return stepRegEspacioOtro(text);
     case 'confirm':     return stepConfirm(text);
     case 'done':        return stepDone(text);
     default:            return stepAskDni(text);
@@ -338,6 +362,7 @@ async function stepAskDni(text) {
     S.userData.nombre = user.nombre;
     S.userData.telefono = user.telefono;
     S.userData.email = user.email;
+    S.userData.espacio = user.espacio || null;
     S.step = 'ask_problem';
     return botSay(`¡Bienvenido/a de nuevo, ${user.nombre}! ¿En qué puedo ayudarle hoy? Cuénteme su problema o consulta.`);
   }
@@ -360,6 +385,26 @@ function stepRegPhone(text) {
     return botSay('El teléfono debe contener solo números (puede incluir el código de área). ¿Me lo indica de nuevo?');
   }
   S.userData.telefono = phone;
+  S.step = 'reg_espacio';
+  return botSay('¡Gracias! Una última cosa: ¿desde qué establecimiento realiza la consulta?', () => {
+    addEspacioPicker();
+  });
+}
+
+const ESPACIOS = ['Municipio de Ceres', 'Municipio de Baradero', 'Municipio de Dolores', 'Municipio de Pérez', 'Otro'];
+
+function stepRegEspacio(text) {
+  if (text === 'Otro') {
+    S.step = 'reg_espacio_otro';
+    return botSay('¿Cuál es el nombre del establecimiento?');
+  }
+  S.userData.espacio = text;
+  S.step = 'ask_problem';
+  return botSay('¡Perfecto! Ya tengo sus datos. Ahora cuénteme: ¿cuál es el problema o consulta con la que necesita ayuda?');
+}
+
+function stepRegEspacioOtro(text) {
+  S.userData.espacio = text.trim().length >= 2 ? text.trim() : 'Otro';
   S.step = 'ask_problem';
   return botSay('¡Perfecto! Ya tengo sus datos. Ahora cuénteme: ¿cuál es el problema o consulta con la que necesita ayuda?');
 }
@@ -376,6 +421,7 @@ function stepAskProblem(text) {
     `• Nombre: ${S.userData.nombre}\n` +
     `• DNI: ${S.userData.dni}\n` +
     (S.userData.telefono ? `• Teléfono: ${S.userData.telefono}\n` : '') +
+    (S.userData.espacio ? `• Establecimiento: ${S.userData.espacio}\n` : '') +
     `• Consulta: ${S.problemData.descripcion}\n\n` +
     `¿Está todo correcto y registro su consulta?`;
   botSay(resumen, () => {
@@ -401,13 +447,15 @@ async function createTicket() {
     if (!S.dbUser && S.userData.dni) {
       await registerUserIfNeeded({
         dni: S.userData.dni, nombre: S.userData.nombre,
-        telefono: S.userData.telefono || '', email: S.userData.email || ''
+        telefono: S.userData.telefono || '', email: S.userData.email || '',
+        espacio: S.userData.espacio || null
       });
     }
     const caseId = await createCase({
       dni: S.userData.dni,
       nombre: S.userData.nombre,
       telefono: S.userData.telefono || '',
+      espacio: S.userData.espacio || null,
       descripcion: S.problemData.descripcion,
       categoria: S.problemData.categoria
     });
@@ -625,6 +673,7 @@ function caseCard(c) {
        <span class="case-cat">${escapeHtml(c.categoria || 'Otro')}</span>
      </div>
      <div class="case-meta">${escapeHtml(c.nombre || '')} · DNI ${escapeHtml(c.dni || '')}${c.telefono ? ' · Tel ' + escapeHtml(c.telefono) : ''}</div>
+     ${c.espacio ? `<div class="case-meta">🏢 ${escapeHtml(c.espacio)}</div>` : ''}
      <div class="case-desc">${escapeHtml(c.descripcion || '')}</div>
      <div class="case-meta">📅 ${fecha}</div>
      ${statusTrack(estado)}`;
