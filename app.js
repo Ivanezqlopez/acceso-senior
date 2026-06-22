@@ -567,6 +567,9 @@ function showView(id) {
 }
 let allCases = [];
 let caseFilter = 'todos';
+let filterEstado = 'todos';
+let filterCategoria = 'todos';
+let filterEspacio = 'todos';
 
 $('#btn-panel').addEventListener('click', () => showView('view-panel'));
 $('#btn-back').addEventListener('click', () => showView('view-chat'));
@@ -587,6 +590,25 @@ document.querySelectorAll('#case-filters .chip').forEach((ch) => ch.addEventList
   caseFilter = ch.dataset.filter;
   renderCases();
 }));
+
+// Filtros avanzados (estado / tipo / establecimiento)
+$('#filter-estado').addEventListener('change', (e) => { filterEstado = e.target.value; renderCases(); });
+$('#filter-categoria').addEventListener('change', (e) => { filterCategoria = e.target.value; renderCases(); });
+$('#filter-espacio').addEventListener('change', (e) => { filterEspacio = e.target.value; renderCases(); });
+
+// Rellena las opciones de Tipo y Establecimiento según los casos cargados (preservando la selección)
+function populateDynamicFilters() {
+  const fill = (sel, values, current) => {
+    const distintos = [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    sel.innerHTML = '<option value="todos">Todos</option>' +
+      distintos.map((v) => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+    sel.value = distintos.includes(current) ? current : 'todos';
+  };
+  fill($('#filter-categoria'), allCases.map((c) => c.categoria), filterCategoria);
+  fill($('#filter-espacio'), allCases.map((c) => c.espacio), filterEspacio);
+  filterCategoria = $('#filter-categoria').value;
+  filterEspacio = $('#filter-espacio').value;
+}
 
 $('#login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -634,6 +656,7 @@ async function loadCases() {
   try { allCases = await getAllCases(); }
   catch (e) { list.innerHTML = '<p class="empty">No se pudieron cargar los casos.</p>'; return; }
   renderStats();
+  populateDynamicFilters();
   renderCases();
 }
 
@@ -651,6 +674,9 @@ function renderCases() {
   let cases = allCases;
   if (caseFilter === 'mios') cases = cases.filter((c) => c.asignadoDni && c.asignadoDni === session.dni);
   else if (caseFilter === 'libres') cases = cases.filter((c) => !c.asignadoDni);
+  if (filterEstado !== 'todos') cases = cases.filter((c) => (c.estado || 'pendiente') === filterEstado);
+  if (filterCategoria !== 'todos') cases = cases.filter((c) => (c.categoria || 'Otro') === filterCategoria);
+  if (filterEspacio !== 'todos') cases = cases.filter((c) => (c.espacio || '') === filterEspacio);
 
   if (!cases.length) {
     list.innerHTML = '<p class="empty">No hay casos para mostrar en esta vista.</p>';

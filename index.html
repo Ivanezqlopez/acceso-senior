@@ -109,6 +109,22 @@
             <button class="chip" data-filter="mios">Mis casos</button>
             <button class="chip" data-filter="libres">Sin asignar</button>
           </div>
+          <div class="filters-adv">
+            <label>Estado
+              <select id="filter-estado">
+                <option value="todos">Todos</option>
+                <option value="pendiente">Pendiente</option>
+                <option value="en proceso">En proceso</option>
+                <option value="resuelto">Resuelto</option>
+              </select>
+            </label>
+            <label>Tipo
+              <select id="filter-categoria"><option value="todos">Todos</option></select>
+            </label>
+            <label>Establecimiento
+              <select id="filter-espacio"><option value="todos">Todos</option></select>
+            </label>
+          </div>
           <div id="cases-list" class="cases-list"></div>
         </div>
 
